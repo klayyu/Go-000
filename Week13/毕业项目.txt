@@ -1,0 +1,25 @@
+很遗憾，作为前端开发的我，没有实际的go项目经验（也希望老师们能给个指点，推荐一些好的开源项目练练或者给一些活干），只能谈谈对以下各知识的理解。
+1）微服务架构（BFF、Service、Admin、Job、Task 分模块）
+微服务由传统的巨石架构逐步演化而来，以应对越来越多的并发及变化。
+BFF-Backend For Frontend（服务于前端的后端），个人理解是直接面向前端提供数据接口的服务，做一些业务逻辑数据的整合。
+Service是真正提供服务的单元。
+Job、Task结合kafka可以合作削峰、分流、缓存，应对过大的流量。
+2）API 设计（包括 API 定义、错误码规范、Error 的使用）
+了解毛大提高的google api设计，未有实战经验，未有深入了解。
+3）gRPC 的使用
+google的rpc框架，基于protobuf，提供IDL语义，规范接口协议，方便进行微服务之间通信，并且可以携带元数据等。
+4）Go 项目工程化（项目结构、DI、代码分层、ORM 框架）
+项目结构 参考毛大工程化一节，了解了实战项目中的目录结构，目前未有实战。
+DI 依赖注入也即是控制反转，参数类型为接口类型，具体类型通过方法赋值的方式传递进来，实现OO的多态。
+代码分层 了解MVC，了解APi层、dao层、service层。
+ORM 不是太了解。
+5）并发的使用（errgroup 的并行链路请求）
+sync.ErrGroup再sync.WaitGroup功能的基础上，增加了错误传递，以及在发生不可恢复的错误时取消整个goroutine集合，或者等待超时。
+6）微服务中间件的使用（ELK、Opentracing、Prometheus、Kafka）
+kafka通过zookeeper管理多个broker，每个topic会拥有多个partition，partition 分为leader和follower，会渐次分布在不同的broker中，保证一个broker宕机时，其它broker中的partition follower可以成为新的leader提供服务，新的leader只能在ISR中产生，一般选择id最小的，producer发送数据时，可以使用不同的方式（hash、随机、轮训、指定）选择不同的partition，想确保数据不丢失，可以通过设置某些参数，比如leader写入后要同步写入到ISR中其它follower才最终返回ack，consumer group为单位去消费，partition会保存每个consumer group的index，消费成功返回ack才会+1，消费要做幂等性，在线状态通过heartbeat来检测。最好是producer数=partition数=consumer group中consumer数可以达到最优负载均衡状态。
+7）缓存的使用优化（一致性处理、Pipeline 优化）
+一致性优化 mysql + redis 的数据一致性，可以通过阿里的canal来订阅mysql 的binlog，推送到redis同步做数据变更，类似于mysql通过binlog来做主从复制。
+Pipeline 
+核心点：pipeline管道模式，较少了ttl，io切换的耗时，使批量命令的执行相对提高了N倍。
+细节点：server对pipeline的命令结果进行缓存处理，会消耗很多内存，同时client执行命令后，结果会缓存在client-revice-buffer中，如果缓存满了，通知server停止发送数据，因此要控制好每次pipeline的大小，保持效率最高；
+常见误区：pipeline每次命令执行多少对于速度不会影响，因为pipeline是长连接的，因此10k命令分为100此0.1k命令并不会造成速度的减慢。
